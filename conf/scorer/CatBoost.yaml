@@ -1,0 +1,18 @@
+name: CatBoost
+
+one_hot: False
+
+loss_function: Logloss
+loss_function_multiclass: MultiClass
+random_seed: 42 # !!null
+thread_count: 1
+iterations: 20
+depth: 1
+learning_rate: 0.2
+nan_mode: Min
+min_child_samples: 4
+l2_leaf_reg: 3
+rsm: 1.0
+use_class_weights: True
+
+importance_type: LossFunctionChange

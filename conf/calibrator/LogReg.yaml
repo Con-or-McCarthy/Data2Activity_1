@@ -1,0 +1,5 @@
+name: LogReg
+
+bounded: True
+method: multiclass # options: classwise, multiclass
+solver: lbfgs

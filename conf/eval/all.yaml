@@ -1,0 +1,41 @@
+# Binary LR system activity choices: (H1, H2)
+activity_pair: [running,car]
+
+# Select which processed data to use
+sample_rate: min # see data/NFI_FARED/clean for options
+data_path: data/NFI_FARED/clean/fared_${eval.sample_rate}.csv
+
+# Do cross-validation (cv) across all subjects or instead a single selection set
+pp_list: [1,2,3,4,5,6,7,8,9,10,13,14]
+do_cv: True
+sel_set_size: 1 # number of people in each selection set
+sel_pp: [3] # If do_cv=False, specify the selection set here
+
+# Implementation details
+device: cpu
+save_plots_wandb: False
+normalise: False
+force_same_samples: False
+n_bootstraps: 1000
+
+# Which phones/carry locations to use. For all, use null (default)
+phone_types: null # ['Iphone6+_IOS_11.4.1', 'IphoneXR_IOS_15.4.1' 'Iphone11_IOS_13.1.1', 'Iphone7_IOS_14.7.1']
+carry_locations: null # ['hand', 'backpocket', 'breastpocket', 'frontpocket', 'rucksack']
+
+# Multiclass
+is_multiclass: false
+expert_cluster_assignment: {
+    sitting: 0, standing: 0,
+    cycling: 1, running: 1, walking: 1,
+    bus: 2, car: 2, train: 2, tram: 2,
+    dragging: 3, kicking: 3, punching: 3, throwing: 3,
+    elevator_down: 4, elevator_up: 4, escalator_down: 4, escalator_up: 4, stair_down: 4, stair_up: 4,
+}
+expert_cluster_map: {
+  'stationary': 0,
+  'movement': 1,
+  'transport': 2,
+  'dynamic': 3,
+  'elevation': 4,
+}
+expert_cluster_choices: ['transport', 'movement', 'dynamic', 'stationary', 'elevation'] # can also choose null to select all

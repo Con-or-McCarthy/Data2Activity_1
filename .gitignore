@@ -1,0 +1,11 @@
+.qodo
+.venv
+.vscode
+__pycache__
+data/*
+!data/NFI_FARED/clean/.gitkeep
+figs/*
+!figs/.gitkeep
+catboost_info
+wandb
+outputs

@@ -1,0 +1,51 @@
+name: NFI
+
+categorical_vars: [
+    ZSIGNALENVIRONMENTTYPE,"ZTYPE","Z_ENT","Z_OPT",
+    "activityType","isVehicular","isMoving","mounted",
+    "workoutType","vehicularFlagsData","turn","pushCount","type"
+]
+numerical_vars: [
+    'ZALTITUDE', 'ZCOURSE', 'ZHORIZONTALACCURACY', 'ZLATITUDE',
+    'ZLONGITUDE', 'ZSPEED','ZVERTICALACCURACY', 'Z_PK', 
+    'activeTime', 'basalNatalies', 'confidence', 'count', 'distance',
+    'floorsAscended', 'floorsDescended', 'mets',
+    'mountedConfidence', 'natalies', 'pace', 'rawdistance',
+    'steps', 'health_distance', 'floors'
+]
+normalisable_vars: [
+    "ZALTITUDE","ZCOURSE","ZHORIZONTALACCURACY","ZLATITUDE",
+    "ZLONGITUDE","ZSPEED","ZVERTICALACCURACY",
+    "activeTime","basalNatalies","confidence","count",
+    "distance","floorsAscended","floorsDescended","mets",
+    "natalies","pace","rawdistance"
+]
+vars_to_use: [
+    count,distance,rawdistance,floorsAscended,floorsDescended,pace,activeTime,
+    pushCount,workoutType,activityType,mets,natalies,basalNatalies,
+    type,confidence,mounted,mountedConfidence,turn,isVehicular,isMoving,vehicularFlagsData,
+    Z_ENT,Z_OPT,ZALTITUDE,ZCOURSE,ZHORIZONTALACCURACY,ZLATITUDE,ZLONGITUDE,ZSPEED,
+    ZVERTICALACCURACY,ZSIGNALENVIRONMENTTYPE,ZTYPE, 
+    steps,health_distance,floors
+]
+label2code: {
+    'sitting': 0,
+    'standing': 1,
+    'walking': 2,
+    'running': 3,
+    'cycling': 4,
+    'stair_down': 5,
+    'stair_up': 6,
+    'elevator_down': 7,
+    'elevator_up': 8,
+    'escalator_down': 9,
+    'escalator_up': 10,
+    'dragging': 11,
+    'kicking': 12,
+    'punching': 13,
+    'throwing': 14,
+    'bus': 15,
+    'car': 16,
+    'tram': 17, 
+    'train': 18
+}

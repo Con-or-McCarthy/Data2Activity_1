@@ -1,0 +1,14 @@
+name: XGBoost
+
+weighted: True
+one_hot: False
+
+objective: binary:logistic
+learning_rate: 0.35
+n_estimators: 200
+max_depth: 3
+seed: 42
+deterministic: true
+nthread: 1
+
+importance_type: PermutationImportance

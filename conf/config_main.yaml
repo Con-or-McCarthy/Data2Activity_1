@@ -1,0 +1,7 @@
+defaults:
+    - _self_
+    - scorer: CatBoost # options: XGBoost, RandomForest, CatBoost, DecisionTree
+    - calibrator: LogReg # options: KDE, LogReg, Guassian
+    - data: NFI_FARED
+    - eval: all
+    - wandb: wandb
