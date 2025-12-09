@@ -9,7 +9,7 @@ This repo uses Digital Trace data from [NFI\_FARED](https://huggingface.co/datas
 
 To get things going right away you can run the following commands in your terminal:
 ```bash
-git clone https://github.com/Con-or-McCarthy/Data2Activity_1 Data2Activity_1
+git clone https://github.com/Con-or-McCarthy/Data2Activity_1 
 cd Data2Activity_1
 python -m venv .venv
 source .venv/bin/activate
