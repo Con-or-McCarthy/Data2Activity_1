@@ -19,7 +19,7 @@ python process_data.py
 python main.py
 ```
 
-This will clone the repo on your computer, install the required python packages to a virtual environment, download the NFI\_FARED dataset to `data/NFI_FARED/original`, process the data to `data/NFI_FARED/clean`, and run the code with default config parameters.   
+This will clone the repo on your computer, install the required python packages to a virtual environment, download the NFI\_FARED dataset to `data/NFI_FARED/original`, process the data to `data/NFI_FARED/clean`, and run the code with default config parameters. Note: this has been verified for python=3.11.5 . 
 
 ## Use
 
