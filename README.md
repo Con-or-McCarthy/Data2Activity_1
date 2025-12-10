@@ -25,9 +25,9 @@ This will clone the repo on your computer, install the required python packages 
 
 This repo uses [weights and biases (wandb)](https://wandb.ai/home) to log results. It is recommended to make a wandb account and enter your information in `conf/wandb/wandb.yaml`. Otherwise results will only be printed to terminal and not stored anywhere.
 
-The configuration of the runs can be adjusted directly in the `.yaml` files under the `conf/` folder, or as we recommend, in the command line when you run a script. For example, to train/test an LR system using a CatBoost scorer, KDE calibrator, with $H_1$=running and $H_2$=cycling, you would run:
+The configuration of the runs can be adjusted directly in the `.yaml` files under the `conf/` folder, or as we recommend, in the command line when you run a script. For example, to train/test an LR system using a CatBoost scorer, Logistic Regression calibrator, with $H_1$=running and $H_2$=cycling, you would run:
 ```python
-python main.py scorer=CatBoost calibrator=KDE eval.activity_pair=['running','cycling']
+python main.py scorer=CatBoost calibrator=LogReg eval.activity_pair=['running','cycling']
 ```
 
 Supported scorers are: `CatBoost`, `DecisionTree`, `RandomForest`, and `XGBoost`. Supported calibrators are: `Gaussian`, `KDE` (Kernel Density Estimation), and `LogReg` (Logistic Regression). Some of the hyperparameters of the scorers and calibrators can be further adjusted as desired. You can explore the config files for options. 
@@ -39,7 +39,7 @@ Multiclass LR systems have also been implemented in this repo. This can be selec
 ```python 
 python main.py scorer=CatBoost calibrator=LogReg eval.is_multiclass=True eval.expert_cluster_choices=['transport', 'movement', 'stationary']
 ```
-To evaluate a multiclass scenario for the expert clusters of classes named 'transport', 'movement', and 'stationary'. Setting `eval.expert_cluster_choices=None'` or not specifying a choice defaults to using all expert clusters. In the multiclass setting, $C_{llr}$ is replaced with the more general $C_{mxe}$. The reference value for $C_{mxe}$ ($log_2(k)$) as well as $\hat{C}_{mxe}$ are both printed at the end of the run. 
+To evaluate a multiclass scenario for the expert clusters of classes named 'transport', 'movement', and 'stationary'. Setting `eval.expert_cluster_choices=None` or not specifying a choice defaults to using all expert clusters. In the multiclass setting, metric $C_{llr}$ is replaced with the more general $C_{mxe}$. The reference value for $C_{mxe}$ ($log_2(K)$) as well as $\hat{C}_{mxe} = C_{mxe} / log_2(K)$ are both printed at the end of the run. 
 
 Currently `Catboost` is the only scorer implemented for multiclass, and `LogReg` and `KDE` are the only calibrators.  
 
@@ -57,7 +57,7 @@ If you wish to use this dataset in your research please cite:
 }
 ```
 
-### Contact
+## Contact
 For questions regarding the data processing, the paper, and/or project GitHub please contact Conor McCarthy: c.t.mccarthy@uva.nl
 
 For questions regarding the data collection please contact Jan Peter van Zandwijk: j.p.van.zandwijk@nfi.nl 

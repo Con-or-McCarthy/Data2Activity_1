@@ -20,6 +20,8 @@ download_and_extract_dataset () {
     dataset_name="$2"
     local_dir="$ORIGINAL_DATA_DIR"
 
+    mkdir -p "./data"
+    mkdir -p ".data/NFI_FARED"
     mkdir -p "$local_dir"
     echo "Downloading .pkl files from HuggingFace repo '$repo_id' into $local_dir ..."
 
