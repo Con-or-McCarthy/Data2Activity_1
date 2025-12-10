@@ -1,0 +1,4 @@
+  # project: <your project name>
+  # job_type: training
+  # notes: exploring calibration of confidences on activity tables extracted from smart phones
+  # entity: <your wandb username>

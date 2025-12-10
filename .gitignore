@@ -7,5 +7,5 @@ data/*
 figs/*
 !figs/.gitkeep
 catboost_info
-wandb
+/wandb/
 outputs
