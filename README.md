@@ -1,5 +1,5 @@
 ## Overview
-This is the GitHub for the paper "[Forensic Activity Classification Using Digital Traces from iPhones: A Machine Learning-based Approach](https://arxiv.org/abs/2512.03786)" (accpeted with shpeherding at DFRWS EU 2026).
+This is the GitHub for the paper "[Forensic Activity Classification Using Digital Traces from iPhones: A Machine Learning-based Approach](https://arxiv.org/abs/2512.03786)" (accpeted at DFRWS EU 2026).
 
 This repo contains the code required to replicate the results from the paper,  namely training and testing a likelihood ratio (LR) system for classifying activities using Digital Trace data extracted from iPhones.
 
