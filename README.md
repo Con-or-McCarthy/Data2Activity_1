@@ -39,7 +39,7 @@ Multiclass LR systems have also been implemented in this repo. This can be selec
 ```python 
 python main.py scorer=CatBoost calibrator=LogReg eval.is_multiclass=True eval.expert_cluster_choices=['transport', 'movement', 'stationary']
 ```
-To evaluate a multiclass scenario for the expert clusters of classes named 'transport', 'movement', and 'stationary'. Setting `eval.expert_cluster_choices=None` or not specifying a choice defaults to using all expert clusters. In the multiclass setting, metric $C_{llr}$ is replaced with the more general $C_{mxe}$. The reference value for $C_{mxe}$ ($log_2(K)$) as well as $\hat{C}_{mxe} = C_{mxe} / log_2(K)$ are both printed at the end of the run. 
+To evaluate a multiclass scenario for the expert clusters of classes named 'transport', 'movement', and 'stationary'. Setting `eval.expert_cluster_choices=None` or not specifying a choice defaults to using all expert clusters. In the multiclass setting, metric $C_{llr}$ is replaced with the more general $C_{mxe}$. The reference value for $C_{mxe} \ (log_2(K))$ as well as $\hat{C}_{mxe} = C_{mxe} / log_2(K)$ are both printed at the end of the run. 
 
 Currently `Catboost` is the only scorer implemented for multiclass, and `LogReg` and `KDE` are the only calibrators.  
 
