@@ -1,11 +1,11 @@
 ## Overview
-This is the GitHub for the paper "[Forensic Activity Classification Using Digital Traces from iPhones: A Machine Learning-based Approach](https://arxiv.org/abs/2512.03786)" (accpeted with shpeherding at DFRWS EU 2026).
+This is the GitHub for the paper "[Forensic Activity Classification Using Digital Traces from iPhones: A Machine Learning-based Approach](https://arxiv.org/abs/2512.03786)" (accepted at DFRWS EU 2026).
 
 This repo contains the code required to replicate the results from the paper,  namely training and testing a likelihood ratio (LR) system for classifying activities using Digital Trace data extracted from iPhones.
 
 ## Getting started
 
-This repo uses Digital Trace data from [NFI\_FARED](https://huggingface.co/datasets/NetherlandsForensicInstitute/NFI_FARED_Digital_Traces). This is forensically available data extracted from iPhones. More information on the dataset can be found in our [paper](https://arxiv.org/abs/2512.03786). 
+This repo uses Digital Trace data from [NFI-FARED](https://huggingface.co/datasets/NetherlandsForensicInstitute/NFI_FARED_Digital_Traces). This is forensically available data extracted from iPhones. More information on the dataset can be found in our [paper](https://arxiv.org/abs/2512.03786). 
 
 To get things going right away you can run the following commands in your terminal:
 ```bash
@@ -16,12 +16,74 @@ source .venv/bin/activate
 pip install -r requirements.txt
 bash download_original_data.sh
 python process_data.py
-python main.py
 ```
 
-This will clone the repo on your computer, install the required python packages to a virtual environment, download the NFI\_FARED dataset to `data/NFI_FARED/original`, process the data to `data/NFI_FARED/clean`, and run the code with default config parameters. Note: this has been verified for python=3.11.5 . 
+This will clone the repo on your computer, install the required python packages to a virtual environment, download the NFI\_FARED dataset to `data/NFI_FARED/original` and process the data to `data/NFI_FARED/clean`. Note: this has been verified for python=3.11.5 . 
 
-## Use
+# Get results on your own data
+
+If you have extracted your own set of Digital Traces from an iPhone, you can use this repo directly to calculate likelihood ratios of activities in the binary and multiclass cases.
+
+First, you must process the extracted traces into `.pkl` files following the steps below:
+==<<Jan Peter writes instructions to process extracted traces to .pkl files>>==
+
+Once processed, your `/user_data/` folder should look like this:
+```
+user_data/
+      ├── pkl_files/
+            ├──df_dict_Cache.pkl
+            ├──df_dict_healthdb_distance.pkl
+            ├──df_dict_healthdb_floors.pkl
+            ├──df_dict_healthdb_steps.pkl
+            ├──df_dict_motionstate.pkl
+            ├──df_dict_natalie.pkl
+            └──df_dict_stepcounthistory.pkl
+      ├── processed/
+      └── output/
+```
+### Option 1: Binary
+If you wish to get the likelihood ratio between two activities at each timestamp, you can simply run the command:
+```
+python use_your_data.py eval.activity_pair="['<activity_0>','<activity_1>']"
+```
+This will process your `.pkl` files into a combined `.csv` file stored in `/user_data/processed/`, then train the model on all of NFI-FARED and produce likelihood ratios. The output will be stored in `user_data/output/output.csv` and will look like this:
+```
+timestamp,          | <activity_0>/<activity_1>  | <activity_1>/<activity_0>
+2026-06-08 10:01:00 | 0.04293277541592836        | 23.292228147658793
+2026-06-08 10:02:00 | 0.04293277541592836        | 23.292228147658793
+2026-06-08 10:02:00 | 0.0315379409092649         | 31.707840498433747
+
+```
+This is compatible with the other configuration options available in `/conf/` (some more information below). For example, if you wish to run analysis for the activities "running" and "car", using only data from an Iphone6+ (iOS 11.4.1) carried in the back pocket, you can run the command:
+```
+python use_your_data.pt eval.activity_pair="['running','car']" eval.phone_types="['Iphone6+_IOS_11.4.1']" eval.carry_location="['backpocket']"
+```
+You can explore the configuration files for more information on the possible commands.
+
+### Option 2: Multiclass
+The script also works for multiclass analysis. You need only to specify `eval.is_multiclass=True` in the command line. Setting `eval.expert_cluster_choices=null` or else not specifying will use all expert clusters. You may select a relevant subset (recommended) like so:
+```
+python use_your_data.py eval.is_multiclass=True eval.expert_cluster_choices="['movement', 'dynamic', 'stationary']"
+```
+This uses only the listed expert clusters. The output of this command would look like this:
+```
+timestamp           | movement              | dynamic             | stationary
+2026-06-08 10:01:00 | 0.0059647064080381096 | 0.03388746796117619 | 0.9601478256307858
+2026-06-08 10:02:00 | 0.0059647064080381096 | 0.03388746796117619 | 0.9601478256307858
+2026-06-08 10:02:00 | 0.02355575445898262   | 0.08651708433174253 | 0.8899271612092748
+```
+and be stored in `/user_data/output/output.csv`. Note that the numbers are the likelihoods, not the LRs. We leave it up to you to decide how to caluclate the LR from the raw likelihood. Multiclass similarly works with other configuration specifications. 
+
+By default, `use_your_data.py` uses the subfolders of `/user_data/`, you may specify your own `.pkl` folder and output folder like so:
+```
+python use_your_data.py +pkl_path="mypickles/pickles" +output_path="results/my_output.csv"
+```
+
+
+
+# Replicate the paper's results
+
+If you simply wish to replicate the results in the paper, you do not need to upload your own data and may run analysis using NFI-FARED. Instructions below.
 
 This repo uses [weights and biases (wandb)](https://wandb.ai/home) to log results. It is recommended to make a wandb account and enter your information in `conf/wandb/wandb.yaml`. Otherwise results will only be printed to terminal and not stored anywhere.
 

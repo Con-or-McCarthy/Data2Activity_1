@@ -334,7 +334,73 @@ def combine_dfs(df_list, freq="min"):
 def save_dfs(df, freq):
     Path(SAVE_FOLDER).mkdir(parents=True, exist_ok=True)
     df.to_csv(SAVE_FOLDER / f"fared_{freq}.csv", index=False, na_rep='nan')
-    
+
+
+def load_user_pkl_files(pkl_folder):
+    """
+    Load user pkl files from the specified folder.
+    Expects: df_dict_stepcounthistory.pkl, df_dict_natalie.pkl, df_dict_motionstate.pkl,
+    df_dict_Cache.pkl, df_dict_healthdb_steps.pkl, df_dict_healthdb_distance.pkl,
+    df_dict_healthdb_floors.pkl
+    """
+    pkl_folder = Path(pkl_folder)
+    pkl_names = [
+        "df_dict_stepcounthistory", "df_dict_natalie", "df_dict_motionstate",
+        "df_dict_Cache", "df_dict_healthdb_steps", "df_dict_healthdb_distance",
+        "df_dict_healthdb_floors"
+    ]
+    dfs = []
+    for name in pkl_names:
+        path = pkl_folder / f"{name}.pkl"
+        if not path.exists():
+            raise FileNotFoundError(f"Required pkl file not found: {path}")
+        with open(path, 'rb') as f:
+            df = pickle.load(f)
+        dfs.append(df)
+
+    # Rename columns for healthdb files (indices 4, 5, 6) - match process_data.load_files
+    for i in [4, 5, 6]:
+        if "start_date (local time)" in dfs[i].columns:
+            dfs[i].rename(columns={"start_date (local time)": "startTime (local time)"}, inplace=True)
+
+    return dfs[0], dfs[1], dfs[2], dfs[3], dfs[4], dfs[5], dfs[6]
+
+
+def process_user_pkl_files(pkl_folder, output_path, freq='min'):
+    """
+    Process user pkl files into a combined CSV using the same pipeline as NFI_FARED.
+    Assumes all data is from the same carrying location, telephone type, test subject,
+    and experiment (grouping in combine_dfs still works with constant META values).
+    """
+    print("Loading user pkl files...")
+    (df_dict_stepcounthistory, df_dict_natalie, df_dict_motionstate, df_dict_Cache,
+     df_dict_healthdb_steps, df_dict_healthdb_distance, df_dict_healthdb_floors) = load_user_pkl_files(pkl_folder)
+
+    df_list = [df_dict_stepcounthistory, df_dict_natalie, df_dict_motionstate, df_dict_Cache,
+               df_dict_healthdb_steps, df_dict_healthdb_distance, df_dict_healthdb_floors]
+
+    print("Cleaning column names...")
+    for i in tqdm(range(len(df_list))):
+        df_list[i] = column_cleaner(df_list[i])
+
+    print("Clipping health rows...")
+    for i in tqdm(range(len(df_list))):
+        df_list[i] = clip_to_freq(df_list[i], freq=freq)
+
+    print("Getting row differences...")
+    for i in tqdm(range(len(df_list))):
+        df_list[i] = differentiate_values(df_list[i])
+
+    print("Combining dataframes...")
+    big_df = combine_dfs(df_list, freq=freq)
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    big_df.to_csv(output_path, index=False, na_rep='nan')
+    print(f"Saved processed user data to {output_path}")
+    return big_df
+
+
 def main(freq='min'):
     print("loading files..")
     df_dict_stepcounthistory, df_dict_natalie, df_dict_motionstate, df_dict_Cache, df_dict_healthdb_steps, df_dict_healthdb_distance, df_dict_healthdb_floors = load_files()

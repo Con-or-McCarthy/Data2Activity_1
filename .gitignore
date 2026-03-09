@@ -8,4 +8,9 @@ figs/*
 !figs/.gitkeep
 catboost_info
 /wandb/
-outputs
+user_data/**
+!user_data/.gitkeep
+!user_data/pkl_files/.gitkeep
+!user_data/processed/.gitkeep
+!user_data/output/.gitkeep
+outputs/*
