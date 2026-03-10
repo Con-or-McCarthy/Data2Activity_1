@@ -44,7 +44,7 @@ user_data/
 ### Option 1: Binary
 If you wish to get the likelihood ratio between two activities at each timestamp, you can simply run the command:
 ```python
-python use_your_data.py eval.activity_pair=['<activity_0>','<activity_1>']
+python use_your_data.py eval.activity_pair="['<activity_0>','<activity_1>']"
 ```
 Replacing `activity_0` and `activity_1` with your desired activities. This will process your `.pkl` files into a combined `.csv` file stored in `/user_data/processed/`, then train the model on all of NFI-FARED and produce likelihood ratios. The output will be stored in `user_data/output/output.csv` and will look like this:
 ```
@@ -56,14 +56,14 @@ timestamp,          | <activity_0>/<activity_1>  | <activity_1>/<activity_0>
 ```
 This is compatible with the other configuration options available in `/conf/` (some more information below). For example, if you wish to run analysis for the activities "running" and "car", using only data from an Iphone6+ (iOS 11.4.1) carried in the back or front pocket, you can run the command:
 ```python
-python use_your_data.py eval.activity_pair=['running','car'] eval.phone_types=['Iphone6+_IOS_11.4.1'] eval.carry_location=['backpocket', 'frontpocket']
+python use_your_data.py eval.activity_pair="['running','car']" eval.phone_types="['Iphone6+_IOS_11.4.1']" eval.carry_locations="['backpocket', 'frontpocket']"
 ```
 You can explore the configuration files for more information on the possible commands.
 
 ### Option 2: Multiclass
 The script also works for multiclass analysis. You need only to specify `eval.is_multiclass=True` in the command line. Setting `eval.expert_cluster_choices=null` or else not specifying will use all expert clusters. You may select a relevant subset (recommended) like so:
 ```python
-python use_your_data.py eval.is_multiclass=True eval.expert_cluster_choices=['movement', 'dynamic', 'stationary']
+python use_your_data.py eval.is_multiclass=True eval.expert_cluster_choices="['movement', 'dynamic', 'stationary']"
 ```
 This uses only the listed expert clusters. The output of this command would look like this:
 ```
@@ -89,7 +89,7 @@ This repo uses [weights and biases (wandb)](https://wandb.ai/home) to log result
 
 The configuration of the runs can be adjusted directly in the `.yaml` files under the `conf/` folder, or as we recommend, in the command line when you run a script. For example, to train/test an LR system using a CatBoost scorer, Logistic Regression calibrator, with $H_1$=running and $H_2$=cycling, you would run:
 ```python
-python main.py scorer=CatBoost calibrator=LogReg eval.activity_pair=['running','cycling']
+python main.py scorer=CatBoost calibrator=LogReg eval.activity_pair="['running','cycling']"
 ```
 
 Supported scorers are: `CatBoost`, `DecisionTree`, `RandomForest`, and `XGBoost`. Supported calibrators are: `Gaussian`, `KDE` (Kernel Density Estimation), and `LogReg` (Logistic Regression). Some of the hyperparameters of the scorers and calibrators can be further adjusted as desired. You can explore the config files for options. 
@@ -99,7 +99,7 @@ ECE, histogram, PAV, and Tippet plots are saved to the folder `figs/` at the end
 ## MultiClass
 Multiclass LR systems have also been implemented in this repo. This can be selected by specifying `eval.is_multiclass=True`. An example command is: 
 ```python 
-python main.py scorer=CatBoost calibrator=LogReg eval.is_multiclass=True eval.expert_cluster_choices=['transport', 'movement', 'stationary']
+python main.py scorer=CatBoost calibrator=LogReg eval.is_multiclass=True eval.expert_cluster_choices="['transport', 'movement', 'stationary']"
 ``` 
 To evaluate a multiclass scenario for the expert clusters of classes named 'transport', 'movement', and 'stationary'. Setting eval.expert_cluster_choices=None or not specifying a choice defaults to using all expert clusters. In the multiclass setting, metric $C_{llr}$ is replaced with the more general $C_{mxe}$. The reference value for $C_{mxe}$ ( $log_2(K)$ ) as well as $\hat{C}\_{mxe}=C_{mxe}/log_2(K)$ are both printed at the end of the run.
 
