@@ -1,4 +1,4 @@
-## Overview
+# Overview
 This is the GitHub for the paper "[Forensic Activity Classification Using Digital Traces from iPhones: A Machine Learning-based Approach](https://arxiv.org/abs/2512.03786)" (accepted at DFRWS EU 2026).
 
 This repo contains the code required to replicate the results from the paper,  namely training and testing a likelihood ratio (LR) system for classifying activities using Digital Trace data extracted from iPhones.
@@ -46,12 +46,12 @@ If you wish to get the likelihood ratio between two activities at each timestamp
 ```
 python use_your_data.py eval.activity_pair=['<activity_0>','<activity_1>']
 ```
-This will process your `.pkl` files into a combined `.csv` file stored in `/user_data/processed/`, then train the model on all of NFI-FARED and produce likelihood ratios. The output will be stored in `user_data/output/output.csv` and will look like this:
+Replacing `activity_0` and `activity_1` with your desired activities. This will process your `.pkl` files into a combined `.csv` file stored in `/user_data/processed/`, then train the model on all of NFI-FARED and produce likelihood ratios. The output will be stored in `user_data/output/output.csv` and will look like this:
 ```
 timestamp,          | <activity_0>/<activity_1>  | <activity_1>/<activity_0>
 2026-06-08 10:01:00 | 0.04293277541592836        | 23.292228147658793
 2026-06-08 10:02:00 | 0.04293277541592836        | 23.292228147658793
-2026-06-08 10:02:00 | 0.0315379409092649         | 31.707840498433747
+2026-06-08 10:03:00 | 0.0315379409092649         | 31.707840498433747
 
 ```
 This is compatible with the other configuration options available in `/conf/` (some more information below). For example, if you wish to run analysis for the activities "running" and "car", using only data from an Iphone6+ (iOS 11.4.1) carried in the back or front pocket, you can run the command:
@@ -70,9 +70,9 @@ This uses only the listed expert clusters. The output of this command would look
 timestamp           | movement              | dynamic             | stationary
 2026-06-08 10:01:00 | 0.0059647064080381096 | 0.03388746796117619 | 0.9601478256307858
 2026-06-08 10:02:00 | 0.0059647064080381096 | 0.03388746796117619 | 0.9601478256307858
-2026-06-08 10:02:00 | 0.02355575445898262   | 0.08651708433174253 | 0.8899271612092748
+2026-06-08 10:03:00 | 0.02355575445898262   | 0.08651708433174253 | 0.8899271612092748
 ```
-and be stored in `/user_data/output/output.csv`. Note that the numbers are the likelihoods, not the LRs. We leave it up to you to decide how to caluclate the LR from the raw likelihood. Multiclass similarly works with other configuration specifications. 
+and be stored in `/user_data/output/output.csv`. Note that the numbers are the likelihoods, not the LRs. We leave it up to you to decide how to calculate the LR from the raw likelihood. Multiclass similarly works with other configuration specifications. Please consult the paper (*Results/Multiclass LR Systems*) for information on the validity of different cluster combinations.
 
 By default, `use_your_data.py` uses the subfolders of `/user_data/`, you may specify your own `.pkl` folder and output folder like so:
 ```
@@ -101,11 +101,11 @@ Multiclass LR systems have also been implemented in this repo. This can be selec
 ```python 
 python main.py scorer=CatBoost calibrator=LogReg eval.is_multiclass=True eval.expert_cluster_choices=['transport', 'movement', 'stationary']
 ``` 
-To evaluate a multiclass scenario for the expert clusters of classes named 'transport', 'movement', and 'stationary'. Setting eval.expert_cluster_choices=None or not specifying a choice defaults to using all expert clusters. In the multiclass setting, metric $C_{llr}$ is replaced with the more general $C_{mxe}$. The reference value for $C_{mxe}$ ($\log_2(K)$) as well as $\hat{C}_{mxe} = C_{mxe} / \log_2(K)$ are both printed at the end of the run.
+To evaluate a multiclass scenario for the expert clusters of classes named 'transport', 'movement', and 'stationary'. Setting eval.expert_cluster_choices=None or not specifying a choice defaults to using all expert clusters. In the multiclass setting, metric $C_{llr}$ is replaced with the more general $C_{mxe}$. The reference value for $C_{mxe}$ ($log_2(K)$) as well as $\hat{C}_{mxe} = C_{mxe} / log_2(K)$ are both printed at the end of the run.
 
 Currently `Catboost` is the only scorer implemented for multiclass, and `LogReg` and `KDE` are the only calibrators.  
 
-## Citation
+# Citation
 If you wish to use this dataset in your research please cite:
 ```
 @misc{mccarthy2025forensicactivityclassificationusing,
@@ -119,7 +119,7 @@ If you wish to use this dataset in your research please cite:
 }
 ```
 
-## Contact
+# Contact
 For questions regarding the data processing, the paper, and/or project GitHub please contact Conor McCarthy: c.t.mccarthy@uva.nl
 
 For questions regarding the data collection please contact Jan Peter van Zandwijk: j.p.van.zandwijk@nfi.nl 
