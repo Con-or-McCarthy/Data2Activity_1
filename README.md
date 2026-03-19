@@ -27,9 +27,11 @@ This will clone the repo on your computer, install the required python packages 
 This repo includes a script `use_your_data.py` which allows you to calculate LRs for a specified pair (or set) of activities from Digital Traces directly using the method described in our paper.
 
 First, you must export the following three files from the phone:
-      * `/private/var/mobile/Library/Health/healthdb_secure.sqlite`
-      * `/private/var/root/Library/Caches/locationd/cache_encryptedC.db`
-      * `/private/var/mobile/Library/Caches/com.apple.routined/Cache.sqlite`
+      
+       `/private/var/mobile/Library/Health/healthdb_secure.sqlite`
+       `/private/var/root/Library/Caches/locationd/cache_encryptedC.db`
+       `/private/var/mobile/Library/Caches/com.apple.routined/Cache.sqlite`
+
 and add them to the folder `user_data/traces/`. The folder should look like this:
 
 ```
@@ -42,7 +44,7 @@ user_data/
       ├── processed/
       └── output/
 ```
-The name of the files does not matter, aside from the end of the string. They must end with `cache_encryptedC.db`, `Cache.sqlite`, and `healthdb_secure.sqlite`, corresponding to the appropriate files exported from the iPhone. These name endings are used to identify the correct files for the processing. Be sure to only have the three files in the `traces/` folder, or else you could get weird behaviour.
+The start of the filenames files do not matter, only the end of the string. They **must** end with `cache_encryptedC.db`, `Cache.sqlite`, and `healthdb_secure.sqlite`, corresponding to the appropriate files exported from the iPhone. These name endings are used to identify the correct files for the processing. Be sure to only have the three files in the `traces/` folder, or else you could get weird behaviour.
 
 
 ### Option 1: Binary
