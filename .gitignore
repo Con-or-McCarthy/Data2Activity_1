@@ -13,4 +13,6 @@ user_data/**
 !user_data/pkl_files/.gitkeep
 !user_data/processed/.gitkeep
 !user_data/output/.gitkeep
+!user_data/traces/
+!user_data/traces/.gitkeep
 outputs/*

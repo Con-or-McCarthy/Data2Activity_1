@@ -22,7 +22,12 @@ class CatBoost(cb.CatBoostClassifier):
     def fit(self, X, y, **kwargs):
         if len(self.cfg.data.categorical_vars) > 0:
             cat_features = self.cfg.data.categorical_vars
-            cat_features = [feat for feat in cat_features if feat in self.cfg.data.vars_to_use]
+            # Only keep categorical features that are actually present in X
+            cat_features = [
+                feat
+                for feat in cat_features
+                if feat in self.cfg.data.vars_to_use and feat in X.columns
+            ]
             
             # Convert categorical features to string type if they're float
             # This ensures CatBoost treats them as categorical
@@ -45,7 +50,11 @@ class CatBoost(cb.CatBoostClassifier):
     def predict_proba(self, X, **kwargs):
         if len(self.cfg.data.categorical_vars) > 0 and not isinstance(X, cb.Pool):
             cat_features = self.cfg.data.categorical_vars
-            cat_features = [feat for feat in cat_features if feat in self.cfg.data.vars_to_use]
+            cat_features = [
+                feat
+                for feat in cat_features
+                if feat in self.cfg.data.vars_to_use and feat in X.columns
+            ]
             
             # Convert categorical features to string type if they're float
             # This ensures CatBoost treats them as categorical
@@ -67,7 +76,11 @@ class CatBoost(cb.CatBoostClassifier):
     def predict(self, X, **kwargs):
         if len(self.cfg.data.categorical_vars) > 0 and not isinstance(X, cb.Pool):
             cat_features = self.cfg.data.categorical_vars
-            cat_features = [feat for feat in cat_features if feat in self.cfg.data.vars_to_use]
+            cat_features = [
+                feat
+                for feat in cat_features
+                if feat in self.cfg.data.vars_to_use and feat in X.columns
+            ]
             
             # Convert categorical features to string type if they're float
             # This ensures CatBoost treats them as categorical

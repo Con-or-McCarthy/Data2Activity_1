@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 import warnings
 import logging
 import math
+import sqlite3
+import pickle
 
-from typing import Callable, Optional
 from sklearn.preprocessing import LabelEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
@@ -18,10 +19,12 @@ from sklearn.base import TransformerMixin
 from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import LogisticRegression
 from sklearn.base import BaseEstimator, TransformerMixin
+from typing import Callable, Optional, List, Union, Tuple
 from collections import Counter
 from abc import ABC, abstractmethod
-from typing import List, Union, Tuple, Sized
 from lir import check_misleading_Inf_negInf, Xy_to_Xn
+from dataclasses import dataclass
+from pathlib import Path
 
 from models.CatBoost import CatBoost
 from models.DecisionTree import DecisionTree
@@ -847,3 +850,197 @@ class MultiClassKDECalibrator(BaseEstimator, TransformerMixin):
             return lambda X, y: (0+bandwidth, bandwidth)
 
 # ----------------- /Multiclass Calibrators ----------------- #
+
+
+# ------------------- Trace to .pkl files ------------------- #
+
+
+APPLE_EPOCH_OFFSET_SECONDS = 978307200  # seconds between 1970-01-01 and 2001-01-01
+
+
+@dataclass(frozen=True)
+class TracePaths:
+    cache_sqlite: Path
+    cache_encrypted_db: Path
+    healthdb_secure_sqlite: Path
+
+
+def _find_single(traces_dir: Path, pattern: str) -> Path:
+    matches = sorted(traces_dir.glob(pattern))
+    if len(matches) == 0:
+        raise FileNotFoundError(f"Missing required trace file matching {pattern} in {traces_dir}")
+    if len(matches) > 1:
+        # deterministic: use the first match
+        return matches[0]
+    return matches[0]
+
+
+def discover_trace_files(traces_dir: Path) -> TracePaths:
+    traces_dir = Path(traces_dir)
+    return TracePaths(
+        cache_encrypted_db=_find_single(traces_dir, "*cache_encryptedC.db"),
+        cache_sqlite=_find_single(traces_dir, "*Cache.sqlite"),
+        healthdb_secure_sqlite=_find_single(traces_dir, "*healthdb_secure.sqlite"),
+    )
+
+
+def _apple_epoch_to_datetime(series: pd.Series) -> pd.Series:
+    """
+    Convert Apple epoch seconds (since 2001-01-01) to naive local datetimes.
+
+    Note: pandas to_datetime without utc uses local timezone; we keep it naive for downstream
+    code that expects datetime-like columns.
+    """
+    s = pd.to_numeric(series, errors="coerce")
+    dt = pd.to_datetime(s + APPLE_EPOCH_OFFSET_SECONDS, unit="s", errors="coerce")
+    return dt
+
+
+def _convert_time_columns(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    df = df.copy()
+    for c in cols:
+        if c in df.columns:
+            df[c] = _apple_epoch_to_datetime(df[c])
+    return df
+
+
+def _read_table(db_path: Path, table: str) -> pd.DataFrame:
+    con = sqlite3.connect(str(db_path))
+    try:
+        return pd.read_sql_query(f"SELECT * FROM {table}", con)
+    finally:
+        con.close()
+
+
+def _read_health_samples(db_path: Path) -> pd.DataFrame:
+    """
+    Read health samples joined with quantity values.
+    We use quantity_samples.quantity as the value.
+    """
+    con = sqlite3.connect(str(db_path))
+    try:
+        # samples has start_date, end_date, data_type, data_id
+        # quantity_samples has quantity keyed by data_id
+        q = """
+        SELECT
+            samples.start_date AS start_date,
+            samples.end_date AS end_date,
+            samples.data_type AS data_type,
+            samples.data_id AS data_id,
+            quantity_samples.quantity AS value
+        FROM samples
+        LEFT JOIN quantity_samples
+            ON samples.data_id = quantity_samples.data_id
+        """
+        return pd.read_sql_query(q, con)
+    finally:
+        con.close()
+
+
+def convert_traces_to_pkl_files(
+    traces_dir: Path,
+    output_pkl_dir: Path,
+    *,
+    meta_carrying_location: str = "unknown",
+    meta_telephone_type: str = "unknown",
+    meta_test_subject: str = "user01",
+    meta_experiment: str = "user",
+    meta_label_activity: str = "unknown",
+    ) -> None:
+    """
+    Convert 3 trace DB/SQLite files to the 7 expected .pkl files described in README.md.
+
+    Output filenames in output_pkl_dir:
+      - df_dict_Cache.pkl
+      - df_dict_motionstate.pkl
+      - df_dict_natalie.pkl
+      - df_dict_stepcounthistory.pkl
+      - df_dict_healthdb_steps.pkl
+      - df_dict_healthdb_distance.pkl
+      - df_dict_healthdb_floors.pkl
+    """
+    traces_dir = Path(traces_dir)
+    output_pkl_dir = Path(output_pkl_dir)
+    output_pkl_dir.mkdir(parents=True, exist_ok=True)
+
+    paths = discover_trace_files(traces_dir)
+
+    # Cache.sqlite -> ZRTCLLOCATIONMO
+    df_cache = _read_table(paths.cache_sqlite, "ZRTCLLOCATIONMO")
+    df_cache = _convert_time_columns(df_cache, ["ZTIMESTAMP"])
+
+    # cache_encryptedC.db tables
+    df_motion = _read_table(paths.cache_encrypted_db, "MotionStateHistory")
+    df_natalie = _read_table(paths.cache_encrypted_db, "NatalieHistory")
+    df_steps = _read_table(paths.cache_encrypted_db, "StepCountHistory")
+
+    # Convert Apple epoch columns to datetime columns expected by processing
+    # Also add a human-readable local time column (with spaces) to match NFI pkls
+    def add_start_time_local(df: pd.DataFrame, start_col: str) -> pd.DataFrame:
+        df = df.copy()
+        if start_col in df.columns:
+            dt = _apple_epoch_to_datetime(df[start_col])
+            df["startTime (local time)"] = dt
+        return df
+
+    df_motion = add_start_time_local(df_motion, "startTime")
+    df_natalie = add_start_time_local(df_natalie, "startTime")
+    df_steps = add_start_time_local(df_steps, "startTime")
+
+    # healthdb_secure.sqlite -> steps/distances/floors from samples joined to quantity_samples
+    df_health = _read_health_samples(paths.healthdb_secure_sqlite)
+    df_health = _convert_time_columns(df_health, ["start_date", "end_date"])
+
+    # Create three health dfs with required columns and renamed value
+    def health_subset(data_type: int, value_name: str) -> pd.DataFrame:
+        sub = df_health[df_health["data_type"] == data_type][
+            ["start_date", "end_date", "data_type", "data_id", "value"]
+        ].copy()
+        sub.rename(
+            columns={
+                "start_date": "start_date (local time)",
+                "end_date": "end_date (local time)",
+                "value": value_name,
+            },
+            inplace=True,
+        )
+        return sub
+
+    df_health_steps = health_subset(7, "steps")
+    df_health_distance = health_subset(8, "distance")
+    df_health_floors = health_subset(12, "floors")
+
+    # Add minimal META columns so the downstream processing pipeline can group.
+    def add_meta(df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        df["META_carrying_location"] = meta_carrying_location
+        df["META_telephone_type"] = meta_telephone_type
+        df["META_test_subject"] = meta_test_subject
+        df["META_experiment"] = meta_experiment
+        df["META_label_activity"] = meta_label_activity
+        return df
+
+    df_cache = add_meta(df_cache)
+    df_motion = add_meta(df_motion)
+    df_natalie = add_meta(df_natalie)
+    df_steps = add_meta(df_steps)
+    df_health_steps = add_meta(df_health_steps)
+    df_health_distance = add_meta(df_health_distance)
+    df_health_floors = add_meta(df_health_floors)
+
+    # Write pickles
+    out = {
+        "df_dict_Cache.pkl": df_cache,
+        "df_dict_motionstate.pkl": df_motion,
+        "df_dict_natalie.pkl": df_natalie,
+        "df_dict_stepcounthistory.pkl": df_steps,
+        "df_dict_healthdb_steps.pkl": df_health_steps,
+        "df_dict_healthdb_distance.pkl": df_health_distance,
+        "df_dict_healthdb_floors.pkl": df_health_floors,
+    }
+
+    for filename, df in out.items():
+        with open(output_pkl_dir / filename, "wb") as f:
+            pickle.dump(df, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+# ------------------- /Trace to .pkl files ------------------- #

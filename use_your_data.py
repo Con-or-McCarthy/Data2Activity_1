@@ -22,18 +22,12 @@ Output:
 """
 import sys
 import warnings
-from pathlib import Path
-
+import hydra
 import numpy as np
 import pandas as pd
+import os
 
-warnings.filterwarnings("ignore", category=FutureWarning)
-
-# Add project root to path
-REPO_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(REPO_DIR))
-
-import hydra
+from pathlib import Path
 
 from process_data import process_user_pkl_files
 from utils import (
@@ -41,12 +35,20 @@ from utils import (
     setup_scorer,
     setup_calibrator,
     CalibratedScorer,
+    convert_traces_to_pkl_files,
 )
+
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+# Add project root to path
+REPO_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(REPO_DIR))
 
 # Default paths for user data
 USER_PKL_FOLDER = REPO_DIR / "user_data" / "pkl_files"
 USER_PROCESSED_CSV = REPO_DIR / "user_data" / "processed" / "user_processed_files.csv"
-USER_OUTPUT_CSV = REPO_DIR / "user_data" / "output" / "output.csv"
+USER_OUTPUT_FOLDER = REPO_DIR / "user_data" / "output"
+USER_TRACES_FOLDER = REPO_DIR / "user_data" / "traces"
 
 # Columns from fared_min that are NOT META (user data should have these)
 META_COLUMNS = [
@@ -74,22 +76,6 @@ def get_user_expected_columns():
 def load_and_validate_user_data(user_path: Path, cfg) -> pd.DataFrame:
     """Load user CSV and validate it has required columns."""
     user_df = pd.read_csv(user_path)
-
-    expected_cols = get_user_expected_columns()
-    missing = [c for c in expected_cols if c not in user_df.columns]
-    if missing:
-        raise ValueError(
-            f"User CSV missing required columns: {missing}. "
-            f"Expected columns (same order as fared_min): {expected_cols[:10]}..."
-        )
-
-    # Ensure vars_to_use columns that exist in reference data are present
-    ref_path = REPO_DIR / "data" / "NFI_FARED" / "clean" / "fared_min.csv"
-    ref_df = pd.read_csv(ref_path, nrows=1)
-    vars_to_use = [c for c in cfg.data.vars_to_use if c in ref_df.columns]
-    missing_vars = [v for v in vars_to_use if v not in user_df.columns]
-    if missing_vars:
-        raise ValueError(f"User CSV missing feature columns: {missing_vars}")
 
     # Parse timestamp
     timestamp_col = "startTime(localtime)"
@@ -121,7 +107,7 @@ def add_dummy_meta_columns(user_df: pd.DataFrame) -> pd.DataFrame:
     return user_df
 
 
-def prepare_train_data(cfg):
+def prepare_train_data(cfg, *, feature_cols: list[str] | None = None):
     """Prepare training data from full fared_min (all subjects)."""
     data = load_data(cfg)
 
@@ -156,7 +142,10 @@ def prepare_train_data(cfg):
         data = data[data["META_carrying_location"].isin(cfg.eval.carry_locations)].copy()
 
     # Use ALL data as train (no train/select split)
-    cols_to_use = [col for col in cfg.data.vars_to_use if col in data.columns]
+    if feature_cols is None:
+        cols_to_use = [col for col in cfg.data.vars_to_use if col in data.columns]
+    else:
+        cols_to_use = [col for col in feature_cols if col in data.columns]
     train_vars = data.filter(items=cols_to_use, axis=1)
     train_labels = data["label"]
 
@@ -185,10 +174,10 @@ def prepare_train_data(cfg):
     return train_vars, train_labels, train_mean, train_std
 
 
-def prepare_test_data(user_df: pd.DataFrame, cfg, train_mean=None, train_std=None):
+def prepare_test_data(user_df: pd.DataFrame, cfg, *, feature_cols: list[str], train_mean=None, train_std=None):
     """Prepare user data for prediction."""
     user_df = add_dummy_meta_columns(user_df)
-    cols_to_use = [col for col in cfg.data.vars_to_use if col in user_df.columns]
+    cols_to_use = [col for col in feature_cols if col in user_df.columns]
     test_vars = user_df.filter(items=cols_to_use, axis=1)
 
     if cfg.eval.normalise and train_mean is not None and train_std is not None:
@@ -214,19 +203,34 @@ def get_timestamp_column(user_df: pd.DataFrame) -> str:
 
 def run_with_config(cfg, user_path: Path, output_path: Path):
     """Train on fared_min, predict on user data, write output CSV."""
-    print("Loading training data...")
-    train_vars, train_labels, train_mean, train_std = prepare_train_data(cfg)
-
     print("Loading user data...")
     user_df = load_and_validate_user_data(user_path, cfg)
-    test_vars = prepare_test_data(user_df, cfg, train_mean, train_std)
+
+    # Choose feature columns as intersection between training reference columns and user columns
+    ref_path = REPO_DIR / "data" / "NFI_FARED" / "clean" / "fared_min.csv"
+    ref_cols = set(pd.read_csv(ref_path, nrows=1).columns)
+    candidate_cols = [c for c in cfg.data.vars_to_use if c in ref_cols]
+    feature_cols = [c for c in candidate_cols if c in user_df.columns]
+    missing_in_user = [c for c in candidate_cols if c not in user_df.columns]
+    if missing_in_user:
+        print("The following training features are not present in user data and will be ignored:")
+        print(", ".join(missing_in_user))
+    if len(feature_cols) == 0:
+        raise ValueError("No usable feature columns found in user data after processing.")
+
+    print(f"Using {len(feature_cols)} feature columns for training/testing.")
+
+    print("Loading training data...")
+    train_vars, train_labels, train_mean, train_std = prepare_train_data(cfg, feature_cols=feature_cols)
+
+    test_vars = prepare_test_data(user_df, cfg, feature_cols=feature_cols, train_mean=train_mean, train_std=train_std)
 
     print("Setting up scorer and calibrator...")
     scorer = setup_scorer(cfg, train_vars, train_labels)
     calibrator = setup_calibrator(cfg)
     lr_system = CalibratedScorer(cfg, scorer, calibrator)
 
-    print("Training model on full fared_min...")
+    print("Training model on full NFI-FARED...")
     lr_system.fit(train_vars, train_labels)
 
     # Build output dataframe
@@ -315,29 +319,37 @@ def main(cfg):
     Use standard Hydra command line overrides, e.g.:
         python use_your_data.py eval.is_multiclass=true
     """
-    # Optional CLI overrides for pkl folder and output path, e.g.:
+    # Optional CLI overrides for trace folder / pkl folder / output path, e.g.:
     #   +pkl_path="mypickles/pickles"
     #   +output_path="results/my_output.csv"
+    #   +traces_path="user_data/traces"
+
+    if "traces_path" in cfg and cfg.traces_path is not None:
+        traces_folder = (REPO_DIR / Path(cfg.traces_path)).resolve()
+    else:
+        traces_folder = USER_TRACES_FOLDER
+
     if "pkl_path" in cfg and cfg.pkl_path is not None:
         pkl_folder = (REPO_DIR / Path(cfg.pkl_path)).resolve()
     else:
         pkl_folder = USER_PKL_FOLDER
-    if not pkl_folder.exists():
-        raise FileNotFoundError(
-            f"User pkl folder not found: {pkl_folder}. "
-            f"Please create it and add the required .pkl files."
-        )
+
+    # Step 0: Convert traces (.db/.sqlite) to required .pkl files (if traces folder exists)
+    if not traces_folder.exists():
+        raise FileNotFoundError(f"Traces folder not found: {traces_folder}. Please provide the path to the traces folder using the +traces_path=... Hydra override.")
+
+    convert_traces_to_pkl_files(traces_folder, pkl_folder)
 
     # Step 1: Process user pkl files into CSV
     processed_csv = USER_PROCESSED_CSV
     process_user_pkl_files(pkl_folder, processed_csv)
 
     # Step 2: Run analysis on processed user data
-    if "output_path" in cfg and cfg.output_path is not None:
-        output_path = (REPO_DIR / Path(cfg.output_path)).resolve()
+    if "output_name" in cfg and cfg.output_name is not None:
+        output_name = f"{cfg.output_name}.csv"
     else:
-        output_path = USER_OUTPUT_CSV
-    run_with_config(cfg, processed_csv, output_path)
+        output_name = "output.csv"
+    run_with_config(cfg, processed_csv, USER_OUTPUT_FOLDER / output_name)
 
 
 if __name__ == "__main__":
