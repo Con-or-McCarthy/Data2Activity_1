@@ -51,7 +51,7 @@ The start of the filenames files do not matter, only the end of the string. They
 
 If you wish to get the LR between two activities at each timestamp, you can simply run the command:
 
-```python
+```bash
 python use_your_data.py eval.activity_pair="['<activity_0>','<activity_1>']"
 ```
 
@@ -67,12 +67,12 @@ timestamp,          | <activity_0>/<activity_1>  | <activity_1>/<activity_0>
 
 This is compatible with the other configuration options available in `conf/` (some more information below). For example, if you wish to run analysis for the activities "running" and "car", using only data from an Iphone6+ (iOS 11.4.1) carried in the back or front pocket, you can run the command:
 
-```python
+```bash
 python use_your_data.py eval.activity_pair="['running','car']" eval.phone_types="['Iphone6+_IOS_11.4.1']" eval.carry_locations="['backpocket', 'frontpocket']"
 ```
 
 If you wish to run the analysis on traces stored in a different folder, you can achieve this by using `+traces_path="path/to/traces"`. Similarly, the folder for storing the intermediate `.pkl` files and name of the outputted `.csv` file can be adjusted using `+pkl_pah="path/to/pickles"` and `+output_name="my_special_output"`, respectively. The command would look like this:
-```python
+```bash
 python use_your_data.py +traces_path="path/to/traces" +pkl_path="path/to/pickles" +output_name="my_special_output"
 ```
 
@@ -83,7 +83,7 @@ You can explore the configuration files for more information on the possible com
 
 The script also works for multiclass analysis. You need only to specify `eval.is_multiclass=True` in the command line. Setting `eval.expert_cluster_choices=null` or else not specifying will use all expert clusters. You may select a relevant subset (recommended) like so:
 
-```python
+```bash
 python use_your_data.py eval.is_multiclass=True eval.expert_cluster_choices="['movement', 'dynamic', 'stationary']"
 ```
 
@@ -108,7 +108,7 @@ This repo uses [weights and biases (wandb)](https://wandb.ai/home) to log result
 
 The configuration of the runs can be adjusted directly in the `.yaml` files under the `conf/` folder, or as we recommend, in the command line when you run a script. For example, to train/test an LR system using a CatBoost scorer, Logistic Regression calibrator, with $H_1$=running and $H_2$=cycling, you would run:
 
-```python
+```bash
 python main.py scorer=CatBoost calibrator=LogReg eval.activity_pair="['running','cycling']"
 ```
 
@@ -120,7 +120,7 @@ ECE, histogram, PAV, and Tippet plots are saved to the folder `figs/` at the end
 
 Multiclass LR systems have also been implemented in this repo. This can be selected by specifying `eval.is_multiclass=True`. An example command is: 
 
-```python
+```bash
 python main.py scorer=CatBoost calibrator=LogReg eval.is_multiclass=True eval.expert_cluster_choices="['transport', 'movement', 'stationary']"
 ```
 
