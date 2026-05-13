@@ -38,20 +38,23 @@ def load_data(cfg):
     data = pd.read_csv(cfg.eval.data_path)
     return data
 
-def split_train_select(cfg, data, sel_set):
+def split_train_select(cfg, data, sel_set, test_data=None):
     # Combine supplementary data with incomplete data
     if cfg.data.name == 'NFI':
         pp_map = {'pp11': 'pp03', 'pp12': 'pp05', 'pp15': 'pp04'} # just swapped pp05 and pp04 (was pp12:pp04 and pp15:pp05)
         data['META_test_subject'] = data['META_test_subject'].map(lambda x: pp_map.get(x, x))
-    
+
     if not cfg.eval.is_multiclass:
         activity_1, activity_2 = cfg.eval.activity_pair
         assert activity_1 != activity_2, f"Null and alternative activities must be different ({activity_1})"
-        
+
         # Select only rows with the specified activities (H1, H0)
         acts_to_use = list((activity_1, activity_2))
         data = data[data['META_label_activity'].isin(acts_to_use)].copy()
         data["label"] = data["META_label_activity"].map({activity_1: 1, activity_2: 0})
+        if test_data is not None:
+            test_data = test_data[test_data['META_label_activity'].isin(acts_to_use)].copy()
+            test_data["label"] = test_data["META_label_activity"].map({activity_1: 1, activity_2: 0})
     else:
         cluster_map = cfg.eval.expert_cluster_assignment
         data["label"] = data["META_label_activity"].map(cluster_map)
@@ -62,18 +65,34 @@ def split_train_select(cfg, data, sel_set):
             desired_clusters = [cfg.eval.expert_cluster_map[choice] for choice in cfg.eval.expert_cluster_choices]
             n_clusters = len(desired_clusters)
             data = data[data["label"].isin(desired_clusters)]
+        if test_data is not None:
+            test_data["label"] = test_data["META_label_activity"].map(cluster_map)
+            if cfg.eval.expert_cluster_choices is not None:
+                test_data = test_data[test_data["label"].isin(desired_clusters)]
 
-    # Select specified phone types
+    if test_data is not None:
+        # Cross-dataset: use all train data, external data as selection set
+        train_data = data
+        sel_data = test_data
+    else:
+        # Same-dataset: split by subject
+        data['META_test_subject'] = data['META_test_subject'].str.extract('(\d+)').astype(int)
+        sel_data = data[data['META_test_subject'].isin(sel_set)]
+        train_data = data[~data['META_test_subject'].isin(sel_set)]
+
+    # Apply phone type filter to train and test independently
     if cfg.eval.phone_types is not None:
-        data = data[data['META_telephone_type'].isin(cfg.eval.phone_types)].copy()
-    # Select specified carry locations
+        train_data = train_data[train_data['META_telephone_type'].isin(cfg.eval.phone_types)].copy()
+    if cfg.eval.test_phone_types is not None:
+        sel_data = sel_data[sel_data['META_telephone_type'].isin(cfg.eval.test_phone_types)].copy()
+    # Apply iOS version filter to test set (substring match on phone type string)
+    if cfg.eval.test_ios_versions is not None:
+        ios_pattern = '|'.join(cfg.eval.test_ios_versions)
+        sel_data = sel_data[sel_data['META_telephone_type'].str.contains(ios_pattern, na=False)].copy()
+    # Apply carry location filter to both
     if cfg.eval.carry_locations is not None:
-        data = data[data['META_carrying_location'].isin(cfg.eval.carry_locations)].copy()
-
-    # Split data into train, sel on basis of pre selected subjects
-    data['META_test_subject'] = data['META_test_subject'].str.extract('(\d+)').astype(int)
-    sel_data = data[data['META_test_subject'].isin(sel_set)]
-    train_data = data[~data['META_test_subject'].isin(sel_set)]
+        train_data = train_data[train_data['META_carrying_location'].isin(cfg.eval.carry_locations)].copy()
+        sel_data = sel_data[sel_data['META_carrying_location'].isin(cfg.eval.carry_locations)].copy()
 
     # Drop columns not to be used
     cols_to_use = [col for col in cfg.data.vars_to_use if col in train_data.columns]    

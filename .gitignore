@@ -16,3 +16,5 @@ user_data/**
 !user_data/traces/
 !user_data/traces/.gitkeep
 outputs/*
+CLAUDE.md
+claude_changes.md

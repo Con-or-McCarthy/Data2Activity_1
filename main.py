@@ -15,8 +15,16 @@ from omegaconf import OmegaConf
 from utils import load_data, split_train_select, setup_scorer, setup_calibrator, CalibratedScorer, compute_cmxe
 
 def train_select_validate(cfg, wandb_available):
-    # Use selection sets defined in config
-    if cfg.eval.do_cv:
+    # Load external test data if configured (cross-dataset evaluation)
+    test_data = None
+    if cfg.eval.test_data_path:
+        test_data = pd.read_csv(cfg.eval.test_data_path)
+        print(f"Using external test data from: {cfg.eval.test_data_path}")
+
+    # Use selection sets defined in config (ignored for cross-dataset)
+    if test_data is not None:
+        sel_sets = [None]  # single pass; all train data used, external data as test
+    elif cfg.eval.do_cv:
         pp_list = cfg.eval.pp_list
         n = cfg.eval.sel_set_size
         sel_sets = [pp_list[i:i + n] for i in range(0, len(pp_list), n)]
@@ -34,13 +42,13 @@ def train_select_validate(cfg, wandb_available):
 
     print("Using data path: ", cfg.eval.data_path)
     print(f"Loading datasets w/ following activities: {cfg.eval.activity_pair}\n")
-    
+
     # Cross-validation over selection sets
     for sel_set in sel_sets:
         data = load_data(cfg)
         try:
             train_data, train_labels, train_pp, train_phone, train_carryloc,\
-            sel_data, sel_labels, sel_pp, sel_phone, sel_carryloc, n_clusters = split_train_select(cfg, data, sel_set)
+            sel_data, sel_labels, sel_pp, sel_phone, sel_carryloc, n_clusters = split_train_select(cfg, data, sel_set, test_data=test_data)
         except Exception as e:
             print(f"Error: `{e}` occured while splitting data for selection set {sel_set}.")
             print("Skipping this selection set.")
@@ -189,6 +197,19 @@ def evaluate_all_systems(cfg, lrs, labels, out_df, wandb_available=False):
                 "cllr_cal_25": cllr_cal_25,
                 "cllr_cal_975": cllr_cal_975})
 
+def _col_eq(series, val):
+    """Equality check that treats NaN == NaN as True (for bootstrap matching)."""
+    if pd.isna(val):
+        return series.isna()
+    return series == val
+
+def _isin_or_nan(series, vals):
+    """isin() that treats NaN as a matchable value."""
+    result = series.isin(vals)
+    if any(pd.isna(v) for v in vals):
+        result = result | series.isna()
+    return result
+
 def multiway_bootstrap_cllr(out_df, B=1000):
     persons = out_df['pps'].unique()
     phones = out_df['phones'].unique()
@@ -207,12 +228,11 @@ def multiway_bootstrap_cllr(out_df, B=1000):
 
         # Create bootstrap sample by resampling rows
         boot_indices = []
-        
+
         for pp in sampled_persons:
             for phone in sampled_phones:
                 for carryloc in sampled_carrylocs:
-                    # Find all rows matching this combination
-                    mask = (out_df['pps'] == pp) & (out_df['phones'] == phone) & (out_df['carrylocs'] == carryloc)
+                    mask = _col_eq(out_df['pps'], pp) & _col_eq(out_df['phones'], phone) & _col_eq(out_df['carrylocs'], carryloc)
                     matching_indices = out_df.index[mask].tolist()
                     boot_indices.extend(matching_indices)
         
@@ -251,9 +271,11 @@ def multiway_bootstrap_cmxe(likelihoods_sel, sel_df, B=1000):
         sampled_phones = np.random.choice(phones, size= Nph, replace=True)
         sampled_carrylocs = np.random.choice(carrylocs, size= Ncl, replace=True)
 
-        mask = (sel_df['pps'].isin(sampled_persons) &
-                sel_df['phones'].isin(sampled_phones) & 
-                sel_df['carrylocs'].isin(sampled_carrylocs))
+        mask = (
+            _isin_or_nan(sel_df['pps'], sampled_persons) &
+            _isin_or_nan(sel_df['phones'], sampled_phones) &
+            _isin_or_nan(sel_df['carrylocs'], sampled_carrylocs)
+        )
 
         if mask.sum() == 0:  # Check if any rows match
             continue

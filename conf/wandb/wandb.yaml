@@ -1,4 +1,4 @@
-  # project: <your project name>
-  # job_type: training
-  # notes: exploring calibration of confidences on activity tables extracted from smart phones
-  # entity: <your wandb username>
+  project: LR_robustness
+  job_type: training
+  notes: exploring robustness of LR systems in the face of domain shift from different iPhone models, iOSes, and dataset
+  entity: c-t-mccarthy-university-of-amsterdam

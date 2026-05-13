@@ -18,9 +18,14 @@ normalise: False
 force_same_samples: False
 n_bootstraps: 1000
 
-# Which phones/carry locations to use. For all, use null (default)
+# Which phones/carry locations to use for training. For all, use null (default)
 phone_types: null # ['Iphone6+_IOS_11.4.1', 'IphoneXR_IOS_15.4.1' 'Iphone11_IOS_13.1.1', 'Iphone7_IOS_14.7.1']
 carry_locations: null # ['hand', 'backpocket', 'breastpocket', 'frontpocket', 'rucksack']
+
+# Test set configuration (training always uses data_path)
+test_data_path: null       # path to external test CSV (e.g. AUAS); null = same-dataset split by subject
+test_phone_types: null     # phone types to filter test set; null = no phone filter on test set
+test_ios_versions: null    # iOS version substrings to filter test set (e.g. ['14.7.1']); null = no filter
 
 # Multiclass
 is_multiclass: false
