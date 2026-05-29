@@ -29,7 +29,7 @@ import os
 
 from pathlib import Path
 
-from process_data import process_user_pkl_files
+from data_processing.process_data import process_user_pkl_files
 from utils import (
     load_data,
     setup_scorer,

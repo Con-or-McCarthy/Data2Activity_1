@@ -35,7 +35,7 @@ APPLE_EPOCH = 978307200  # seconds between 1970-01-01 and 2001-01-01 (UTC)
 TZ_OFFSET = pd.Timedelta(hours=1)  # CET = UTC+1 (November/December 2024)
 
 sys.path.insert(0, str(REPO_DIR))
-from process_data import column_cleaner, clip_to_freq, differentiate_values, combine_dfs
+from data_processing.process_data import column_cleaner, clip_to_freq, differentiate_values, combine_dfs
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 

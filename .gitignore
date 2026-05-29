@@ -18,3 +18,5 @@ user_data/**
 outputs/*
 CLAUDE.md
 claude_changes.md
+!conf/wandb/wandb.yaml
+conf/wandb/
