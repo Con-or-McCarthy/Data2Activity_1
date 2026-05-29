@@ -15,15 +15,20 @@ from omegaconf import OmegaConf
 from utils import load_data, split_train_select, setup_scorer, setup_calibrator, CalibratedScorer, compute_cmxe
 
 def train_select_validate(cfg, wandb_available):
-    # Load external test data if configured (cross-dataset evaluation)
-    test_data = None
-    if cfg.eval.test_data_path:
-        test_data = pd.read_csv(cfg.eval.test_data_path)
-        print(f"Using external test data from: {cfg.eval.test_data_path}")
+    # Determine train and test data paths from setup + train_data
+    paths = {'NFI': cfg.eval.nfi_data_path, 'AUAS': cfg.eval.auas_data_path}
+    train_path = paths[cfg.eval.train_data]
+    test_dataset = 'AUAS' if cfg.eval.train_data == 'NFI' else 'NFI'
 
-    # Use selection sets defined in config (ignored for cross-dataset)
+    # Load external test data for cross-dataset evaluation
+    test_data = None
+    if cfg.eval.setup == 'cross':
+        test_data = pd.read_csv(paths[test_dataset])
+        print(f"Cross-dataset setup: training on {cfg.eval.train_data}, testing on {test_dataset}")
+
+    # CV loop only applies to same-dataset evaluation
     if test_data is not None:
-        sel_sets = [None]  # single pass; all train data used, external data as test
+        sel_sets = [None]  # single pass for cross-dataset
     elif cfg.eval.do_cv:
         pp_list = cfg.eval.pp_list
         n = cfg.eval.sel_set_size
@@ -40,12 +45,12 @@ def train_select_validate(cfg, wandb_available):
     preds_sel = []
     likelihoods_sel = []
 
-    print("Using data path: ", cfg.eval.data_path)
+    print(f"Training data: {train_path}")
     print(f"Loading datasets w/ following activities: {cfg.eval.activity_pair}\n")
 
     # Cross-validation over selection sets
     for sel_set in sel_sets:
-        data = load_data(cfg)
+        data = load_data(train_path)
         try:
             train_data, train_labels, train_pp, train_phone, train_carryloc,\
             sel_data, sel_labels, sel_pp, sel_phone, sel_carryloc, n_clusters = split_train_select(cfg, data, sel_set, test_data=test_data)
@@ -94,7 +99,7 @@ def train_select_validate(cfg, wandb_available):
         lrs = np.array(lrs_sel)
         labels = np.array(labels_sel)
         lr_system = CalibratedScorer(cfg, None, None)  # Dummy system for evaluation
-        evaluate_all_systems(cfg, lrs, labels, out_df)
+        evaluate_all_systems(cfg, lrs, labels, out_df, wandb_available)
     else: 
         likelihoods_sel = np.vstack(likelihoods_sel)
         out_df = pd.DataFrame({

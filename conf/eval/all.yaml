@@ -1,11 +1,16 @@
 # Binary LR system activity choices: (H1, H2)
 activity_pair: [running,car]
 
-# Select which processed data to use
-sample_rate: min # see data/NFI_FARED/clean for options
-data_path: data/NFI_FARED/clean/fared_${eval.sample_rate}.csv
+# Evaluation setup
+setup: same       # 'same': train and test on same dataset; 'cross': train and test on different datasets
+train_data: NFI   # 'NFI' or 'AUAS' - which dataset to train on
 
-# Do cross-validation (cv) across all subjects or instead a single selection set
+# Dataset paths
+sample_rate: min  # see data/NFI_FARED/clean for options
+nfi_data_path: data/NFI_FARED/clean/fared_${eval.sample_rate}.csv
+auas_data_path: data/AUAS/clean/auas_processed.csv
+
+# Cross-validation (same-dataset only; NFI uses pp_list, AUAS not supported)
 pp_list: [1,2,3,4,5,6,7,8,9,10,13,14]
 do_cv: True
 sel_set_size: 1 # number of people in each selection set
@@ -18,14 +23,10 @@ normalise: False
 force_same_samples: False
 n_bootstraps: 1000
 
-# Which phones/carry locations to use for training. For all, use null (default)
-phone_types: null # ['Iphone6+_IOS_11.4.1', 'IphoneXR_IOS_15.4.1' 'Iphone11_IOS_13.1.1', 'Iphone7_IOS_14.7.1']
+# Phone and carry location filters (applied to both train and test with normalised matching)
+# phone_types uses normalised matching: 'Iphone7_IOS_14.7.1' matches NFI and AUAS iPhone 7 records
+phone_types: null # e.g. ['Iphone7_IOS_14.7.1'] - works across both datasets
 carry_locations: null # ['hand', 'backpocket', 'breastpocket', 'frontpocket', 'rucksack']
-
-# Test set configuration (training always uses data_path)
-test_data_path: null       # path to external test CSV (e.g. AUAS); null = same-dataset split by subject
-test_phone_types: null     # phone types to filter test set; null = no phone filter on test set
-test_ios_versions: null    # iOS version substrings to filter test set (e.g. ['14.7.1']); null = no filter
 
 # Multiclass
 is_multiclass: false

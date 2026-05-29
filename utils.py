@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 import lir
 import numpy as np
@@ -34,9 +35,25 @@ from models.XGBoost import XGBoost
 LOG = logging.getLogger(__name__)
 pd.options.mode.chained_assignment = None  # default='warn'
 
-def load_data(cfg):
-    data = pd.read_csv(cfg.eval.data_path)
-    return data
+def load_data(path):
+    return pd.read_csv(path)
+
+def _normalise_phone_type(s):
+    """Normalise a phone type string for cross-dataset comparison.
+
+    Maps both NFI ('Iphone7_IOS_14.7.1') and AUAS ('iPhone_7_iOS_14.7.1_nr20')
+    to the same canonical form ('iphone7_ios_14.7.1').
+    """
+    s = str(s).lower()
+    s = re.sub(r'_nr\d+$', '', s)               # strip AUAS device suffix (_nr20 etc.)
+    s = re.sub(r'iphone_(\S)', r'iphone\1', s)  # iphone_7 → iphone7
+    return s
+
+def _filter_by_phone_types(df, phone_types):
+    """Filter dataframe rows to those whose phone type normalises to one in phone_types."""
+    targets = {_normalise_phone_type(p) for p in phone_types}
+    mask = df['META_telephone_type'].apply(lambda x: _normalise_phone_type(x) in targets)
+    return df[mask].copy()
 
 def split_train_select(cfg, data, sel_set, test_data=None):
     # Combine supplementary data with incomplete data
@@ -80,15 +97,10 @@ def split_train_select(cfg, data, sel_set, test_data=None):
         sel_data = data[data['META_test_subject'].isin(sel_set)]
         train_data = data[~data['META_test_subject'].isin(sel_set)]
 
-    # Apply phone type filter to train and test independently
+    # Apply phone type filter to both train and test using normalised matching
     if cfg.eval.phone_types is not None:
-        train_data = train_data[train_data['META_telephone_type'].isin(cfg.eval.phone_types)].copy()
-    if cfg.eval.test_phone_types is not None:
-        sel_data = sel_data[sel_data['META_telephone_type'].isin(cfg.eval.test_phone_types)].copy()
-    # Apply iOS version filter to test set (substring match on phone type string)
-    if cfg.eval.test_ios_versions is not None:
-        ios_pattern = '|'.join(cfg.eval.test_ios_versions)
-        sel_data = sel_data[sel_data['META_telephone_type'].str.contains(ios_pattern, na=False)].copy()
+        train_data = _filter_by_phone_types(train_data, cfg.eval.phone_types)
+        sel_data = _filter_by_phone_types(sel_data, cfg.eval.phone_types)
     # Apply carry location filter to both
     if cfg.eval.carry_locations is not None:
         train_data = train_data[train_data['META_carrying_location'].isin(cfg.eval.carry_locations)].copy()
