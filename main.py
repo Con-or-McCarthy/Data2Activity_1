@@ -8,23 +8,48 @@ import numpy as np
 import pandas as pd
 import matplotlib.patches as mpatches
 
+from pathlib import Path
 from tqdm import tqdm
 from sklearn.metrics import f1_score
 from omegaconf import OmegaConf
 
 from utils import load_data, split_train_select, setup_scorer, setup_calibrator, CalibratedScorer, compute_cmxe
 
+def dataset_name(path):
+    """
+    Display name for a dataset CSV: the folder holding it under data/, else the
+    file stem.  Reports the dataset actually loaded rather than the 'NFI'/'AUAS'
+    key, which is only the slot the path was passed in through -- either slot can
+    be pointed at any CSV (e.g. eval.auas_data_path=data/Dataset_1/clean/...).
+    """
+    parts = Path(path).parts
+    if 'data' in parts:
+        i = parts.index('data')
+        if i + 1 < len(parts) - 1:  # a folder sits between data/ and the file
+            return parts[i + 1]
+    return Path(path).stem
+
 def train_select_validate(cfg, wandb_available):
     # Determine train and test data paths from setup + train_data
     paths = {'NFI': cfg.eval.nfi_data_path, 'AUAS': cfg.eval.auas_data_path}
     train_path = paths[cfg.eval.train_data]
-    test_dataset = 'AUAS' if cfg.eval.train_data == 'NFI' else 'NFI'
+    test_path = paths['AUAS' if cfg.eval.train_data == 'NFI' else 'NFI']
+    train_name = dataset_name(train_path)
+    test_name = dataset_name(test_path)
+
+    # Record the datasets actually used so runs are identifiable in wandb
+    if wandb_available:
+        wandb.config.update(
+            {'train_dataset': train_name,
+             'test_dataset': test_name if cfg.eval.setup == 'cross' else train_name},
+            allow_val_change=True
+        )
 
     # Load external test data for cross-dataset evaluation
     test_data = None
     if cfg.eval.setup == 'cross':
-        test_data = pd.read_csv(paths[test_dataset])
-        print(f"Cross-dataset setup: training on {cfg.eval.train_data}, testing on {test_dataset}")
+        test_data = pd.read_csv(test_path)
+        print(f"Cross-dataset setup: training on {train_name}, testing on {test_name}")
 
     # CV loop only applies to same-dataset evaluation
     if test_data is not None:
