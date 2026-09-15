@@ -4,11 +4,11 @@ one_hot: False
 
 loss_function: Logloss
 loss_function_multiclass: MultiClass
-random_seed: 42 # !!null
+random_seed: !!null
 thread_count: 1
-iterations: 20
-depth: 1
-learning_rate: 0.2
+iterations: 1
+depth: 5
+learning_rate: 0.035
 nan_mode: Min
 min_child_samples: 4
 l2_leaf_reg: 3

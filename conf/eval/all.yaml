@@ -1,5 +1,5 @@
 # Binary LR system activity choices: (H1, H2)
-activity_pair: [running,car]
+activity_pair: [standing,walking]
 
 # Evaluation setup
 setup: same       # 'same': train and test on same dataset; 'cross': train and test on different datasets
